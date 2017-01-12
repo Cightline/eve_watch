@@ -1,0 +1,23 @@
+{
+    "general":{
+        "base_dir":"/home/stealth/programming/eve_watch",
+        "cache_type":"filesystem"
+    },
+
+    "database":{
+        "data":"sqlite:////home/stealth/programming/eve_watch/data.sqlite",
+        "ccp_dump":"sqlite:////home/stealth/programming/eve_watch/sqlite-latest.sqlite"
+    },
+
+    "alliances":{
+        "Hard Knocks Citizens":[99005065],
+        "Interhole Revenue Service":[99006918]
+    },
+
+    "DEBUG":true,
+    "project_name":"EVEMint",
+    "CACHE_DIR":"/home/stealth/programming/evemint/cache",
+    "CACHE_DEFAULT_TIMEOUT":100000000,
+    "CACHE_TYPE":"filesystem"
+}
+         
