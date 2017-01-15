@@ -9,8 +9,11 @@
         "ccp_dump":"sqlite:////home/stealth/programming/eve_watch/sqlite-latest.sqlite"
     },
 
+    "comments":{
+        "Brave Collective":[99003214]
+    },
+
     "alliances":{
-        "Hard Knocks Citizens":[99005065],
         "Interhole Revenue Service":[99006918]
     },
 

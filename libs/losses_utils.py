@@ -48,9 +48,9 @@ class LossesUtils():
                 self.db.base.classes.kills.allianceID.in_(alliance_ids))
 
 
-    def query(self, alliance_ids, start_date, characterID=None, shipTypeID=None, kills='used'):
+    def query(self, alliance_ids, start_date, characterID=None, shipTypeID=None, type_='attacker'):
 
-        if kills == 'used':
+        if type_ == 'attacker':
             #if characterID and shipTypeID:
             #    return self.db.session.query(self.classes.attacker).filter_by(characterID=characterID, shipTypeID=shipTypeID).filter(
             #            self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime >= start_date).all()

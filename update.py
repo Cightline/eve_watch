@@ -5,6 +5,8 @@ import requests
 
 from dateutil.relativedelta import relativedelta
 
+from elasticsearch import Elasticsearch
+
 from sqlalchemy import *
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import IntegrityError
@@ -23,6 +25,8 @@ class Command():
         self.eve      = evelink.eve.EVE() 
         self.db       = Connect(self.config['database']['data']) 
         self.classes  = self.db.base.classes
+        self.headers  = {'user-agent': 'kill-frame/0.0.1 maintainer: Sightline email: sightline.networks@gmail.com', 'Accept-Encoding': 'gzip'}
+        self.es       = Elasticsearch('192.168.1.3', port=9200)
 
 
         parser = argparse.ArgumentParser()
@@ -69,8 +73,6 @@ class Command():
 
 
 
-
-
     def update_losses(self, days_ago):
         '''Pull the kills from zKillboard and store them in the database'''
         print('updating losses...')
@@ -80,7 +82,8 @@ class Command():
         alliance_ids        = []
         alliances_requested = []
         time_format = '%Y-%m-%d %H:%M:%S'
-        start_time  = (datetime.datetime.now() - datetime.timedelta(days=days_ago)).strftime('%Y%m%d00')
+        start_time  = (datetime.datetime.now() - datetime.timedelta(days=days_ago)).strftime('%Y%m%d0000')
+        data = None
 
         print('Start date: %s' % (start_time))
 
@@ -91,74 +94,107 @@ class Command():
 
         for alliance_id in alliance_ids:
 
-            # what?
+            page = 0
+            
+            
             if alliance_id in alliances_requested:
                 continue 
 
             alliances_requested.append(alliance_id)
-            kb_url = 'https://zkillboard.com/api/kills/allianceID/%s/startTime/%s' % (alliance_id, start_time)
-
-            # USE REQUESTS JSON
-            page = requests.get(kb_url)
-            print(kb_url)
-            data = json.loads(page.text)
-
+          
             print('Working on: %s' % (alliance_id))
-
-            # Example
-            #{"characterID":926924867,"characterName":"clavo oxidado",
-            #"corporationID":98390683,"corporationName":"Hogyoku","allianceID":1354830081,
-            #"allianceName":"Goonswarm Federation","factionID":0,"factionName":"","securityStatus":-0.9,"damageDone":0,"finalBlow":0,"weaponTypeID":5439,"shipTypeID":0}
-            # https://zkillboard.com/kill/54204593/
-
-
-            for row in data:
+            
+            while True:
                 
-                if type(data) == dict and 'error' in data.keys():
-                    exit(data)
+                data = requests.get('https://zkillboard.com/api/kills/allianceID/%s/startTime/%s/page/%s/' % (alliance_id, start_time, page), 
+                                                                                                            headers=self.headers)
+           
+                print(data.url)
+                j_data = json.loads(data.text)
 
-                kill_time   = datetime.datetime.strptime(row['killTime'], time_format)
-                kill_id     = row['killID']
+                print(len(j_data))
+            
+                if len(j_data) < 200:
+                    break
 
-                # See if the killID already exists in the database
-                query = losses.session.query(losses.base.classes.kills).filter_by(killID=kill_id).first()
-
-                if query:
-                    print('killID already exists, skipping...')
-                    continue
-
-                # The kill itself
-                kill = losses.base.classes.kills(killID=kill_id,
-                                             shipTypeID=row['victim']['shipTypeID'],
-                                             killTime=kill_time,
-                                             characterID=row['victim']['characterID'],
-                                             corporationID=row['victim']['corporationID'],
-                                             corporationName=row['victim']['corporationName'],
-                                             allianceID=row['victim']['allianceID'])
+                page += 1
 
 
-                # Attach the items lost to the kill 
-                for line in row['items']:
-                    item = losses.base.classes.items_lost(typeID=line['typeID'])
-                    kill.items_lost_collection.append(item)
+                for row in j_data:
+                    
+                    if type(j_data) == dict and 'error' in j_data.keys():
+                        exit(j_data)
 
-        
-                for line in row['attackers']:
-                    attacker = losses.base.classes.attacker(weaponTypeID=line['weaponTypeID'],
-                                                        allianceID=line['allianceID'],
-                                                        corporationName=line['corporationName'],
-                                                        shipTypeID=line['shipTypeID'],
-                                                        characterName=line['characterName'],
-                                                        characterID=line['characterID'],
-                                                        allianceName=line['allianceName'])
-                                                        
+                    kill_time   = datetime.datetime.strptime(row['killTime'], time_format)
+                    kill_id     = row['killID']
 
-                    kill.attacker_collection.append(attacker)
+                    # See if the killID already exists in the database
+                    query = losses.session.query(losses.base.classes.kills).filter_by(killID=kill_id).first()
+
+                    if query:
+                        print('killID already exists, skipping...')
+                        continue
+
+                    
+                    # The kill itself
+                    kill = losses.base.classes.kills(killID=kill_id,
+                                                 shipTypeID=row['victim']['shipTypeID'],
+                                                 killTime=kill_time,
+                                                 characterID=row['victim']['characterID'],
+                                                 corporationID=row['victim']['corporationID'],
+                                                 corporationName=row['victim']['corporationName'],
+                                                 allianceID=row['victim']['allianceID'])
+
+
+                    #res = self.es.index(index='eve', op_type='create', doc_type='items', body={'killID':kill_id, 
+                    #                                                         'timestamp':kill_time, 
+                    #                                                         'characterID':row['victim']['characterID'],
+                    #                                                         'shipTypeID':self.utils.lookup_typename(row['victim']['shipTypeID']),
+                    #                                                         'coprorationID':row['victim']['corporationID'],
+                    #                                                         'corporationName':row['victim']['corporationName'],
+                    #                                                         'allianceID':row['victim']['allianceID']})
+
+
+                    # Attach the items lost to the kill 
+                    for line in row['items']:
+                        item = losses.base.classes.items_lost(typeID=line['typeID'])
+                        kill.items_lost_collection.append(item)
+
+                    #    res = self.es.index(index='eve', op_type='create', doc_type='items', body={'killID':kill_id, 
+                    #                                                             'timestamp':kill_time, 
+                    #                                                             'item':self.utils.lookup_typename(line['typeID'])})
 
 
 
-                losses.session.add(kill)
-                losses.session.commit()
+            
+                    for line in row['attackers']:
+                        attacker = losses.base.classes.attacker(weaponTypeID=line['weaponTypeID'],
+                                                            allianceID=line['allianceID'],
+                                                            corporationName=line['corporationName'],
+                                                            shipTypeID=line['shipTypeID'],
+                                                            characterName=line['characterName'],
+                                                            characterID=line['characterID'],
+                                                            allianceName=line['allianceName'])
+                                                            
+
+                        kill.attacker_collection.append(attacker)
+
+                    #    res = self.es.index(index='eve', op_type='create', doc_type='attacker', body={'killID':kill_id,
+                    #                                                                'shipTypeID':self.utils.lookup_typename(line['shipTypeID']),
+                    #                                                                'allianceID':line['allianceID'],
+                    #                                                                'weaponTypeID':self.utils.lookup_typename(line['weaponTypeID']),
+                    #                                                                'characterName':line['characterName'],
+                    #                                                                'allianceName':line['allianceName'],
+                    #                                                                'coprorationName':line['corporationName'],
+                    #                                                                'characterID':line['characterID'],
+                    #                                                                'timestamp':kill_time})
+
+                        #print(res)
+
+                    
+
+                    losses.session.add(kill)
+                    losses.session.commit()
 
 
     def update_alliances(self):
