@@ -6,17 +6,12 @@ import copy
 
 import collections
 
-import pandas as pd
-
-from elasticsearch import Elasticsearch
-
-
 
 from libs.losses_utils import LossesUtils
 from libs.utils        import Utils
+from libs.update       import Update
 
 from sql.db_connect    import Connect
-
 
 
 
@@ -26,27 +21,37 @@ class Command():
             self.config = json.load(cfg)
             assert(self.config)
     
-        self.of_path         = 'output.txt'
-        self.of_file         = open('output.txt','w')
         self.lu              = LossesUtils(self.config)
         self.u               = Utils(self.config)
         self.now             = datetime.datetime.now()
         self.db              = Connect(self.config['database']['data'])
-        self.es              = Elasticsearch('192.168.1.3', port=9200)
+        self.update          = Update(self.config)
         
         parser = argparse.ArgumentParser()
         parser.add_argument('--fleet-comp', help='fleet composition', action='store', type=int)
         parser.add_argument('--min-fleet-limit', help='the minimum fleet size to show', action='store', type=int, default=3)
         parser.add_argument('--top-fleet-limit', help='the minimum fleet size to show', action='store', type=int, default=10)
+        parser.add_argument('--update', help='update the database by days', action='store', type=int, default=30)
+        parser.add_argument('--alliance', help='the alliance to update or view', action='store', type=int)
+        parser.add_argument('--kills', help='do you want to list kills or losses', action='store', type=bool, default=True)
 
         self.args = parser.parse_args() 
-        
-        if self.args.fleet_comp:
-    
-            for a in self.config['alliances']:
-                self.fleet_composition(a, self.args.fleet_comp, self.args.min_fleet_limit, self.args.top_fleet_limit)
 
-    def fleet_composition(self, alliance, days_ago, min_fleet_limit, top_fleet_limit):
+
+        if self.args.fleet_comp:
+            self.fleet_composition(alliance=[self.args.alliance], 
+                                   days_ago=self.args.fleet_comp, 
+                                   min_fleet_limit=self.args.min_fleet_limit, 
+                                   top_fleet_limit=self.args.top_fleet_limit,
+                                   kills=self.args.kills)
+
+
+    def update_database(self, days, alliance):
+        self.update.update_losses(days_ago=days, alliance_ids=alliance)
+
+
+    
+    def fleet_composition(self, alliance, days_ago, min_fleet_limit, top_fleet_limit, kills=False):
         kill_dict  = {}
         fleet_dict = {}
         some_dict  = {}
@@ -54,15 +59,23 @@ class Command():
         filtered_dict = {}
         ordered_and_filtered_dict = {}
 
+        self.update_database(days=days_ago, alliance=alliance)
 
         start_date = self.now - datetime.timedelta(days=days_ago)
 
         print('\n\nSearch start date: %s' % (start_date.strftime('%d %B %Y')))
-        print('Alliance: %s (ID %s)\n' % (alliance, self.config['alliances'][alliance][0]))
+        print('Alliance: %s (ID %s)\n' % ('FIX ME', alliance))
       
 
-        s = self.lu.query(self.config['alliances'][alliance], start_date=start_date, type_='attacker')
 
+        # NOT REALLY IMPLEMENTED, FIX
+        if kills:
+            s = self.lu.query(alliance, start_date=start_date, type_='attacker')
+
+        else:
+            print('what')
+            s = self.lu.query(alliance, start_date=start_date, type_='losses')
+            
       
         # Attackers
         for kill in s:
@@ -77,7 +90,7 @@ class Command():
         # Iterate through the dict
         for key, value in kill_dict.items():
             # We want more than 1 
-            if len(value) > 1:
+            if len(value) >= min_fleet_limit:
                 # Grab all the ships used and append them to a list
                 # Fleets should have a unique killID, as they were all grouped by killID 
                 fleet = []
@@ -125,10 +138,17 @@ class Command():
             times_used = len(filtered_dict[k])
 
             if times_used >= min_fleet_limit:
-                print(times_used, ' '.join(eval(k)))
-        
+                # FIX EVAL
+                c = collections.Counter(eval(k)).most_common()
+                
+                # jesus fuck
+                print('SUCCESSFULL USAGE: (%s)' % (times_used), 'SHIPS: %s' % (' '.join('%s %sx ' % t for t in c)))
+
+
                 for item in filtered_dict[k]:
                     print('https://zkillboard.com/kill/%s' % (item))
+
+                print('\n')
 
     
 

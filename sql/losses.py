@@ -18,6 +18,7 @@ class Attacker(Base):
     characterID     = Column(Integer)
     allianceName    = Column(String(255))
     killTime        = Column(DateTime, ForeignKey('kills.killTime'))
+    solarSystemID   = Column(Integer)
 
 class Kills(Base):
     __tablename__ = "kills"

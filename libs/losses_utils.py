@@ -67,3 +67,5 @@ class LossesUtils():
             return self.db.session.query(self.classes.attacker).filter(self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime >= start_date).all()
 
 
+        else:
+            return self.db.session.query(self.classes.kills).filter(self.classes.kills.allianceID.in_(alliance_ids)).filter(self.classes.kills.killTime >= start_date).all()
