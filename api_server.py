@@ -48,8 +48,7 @@ class FleetComposition(Resource):
         data = core.fleet_composition(start_time=start_time, end_time=end_time, alliance=[alliance])
 
 
-        print(data)
-       
+         
 
         return data
 

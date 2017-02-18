@@ -49,22 +49,11 @@ class LossesUtils():
 
 
     def query(self, alliance_ids, start_time, end_time, characterID=None, shipTypeID=None, type_='attacker'):
+        print('FUCKER')
 
-        if type_ == 'attacker':
-            #if characterID and shipTypeID:
-            #    return self.db.session.query(self.classes.attacker).filter_by(characterID=characterID, shipTypeID=shipTypeID).filter(
-            #            self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime >= start_date).all()
-
-            #if characterID:
-            #    return self.db.session.query(self.classes.attacker).filter_by(characterID=characterID).filter(
-            #            self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime >= start_date).all()
-
-            #if shipTypeID:
-            #    return self.db.session.query(self.classes.attacker).filter_by(shipTypeID=shipTypeID).filter(self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime >= start_date).all()
-
-            #else:
-            
-            return self.db.session.query(self.classes.attacker).filter(self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime.between(start_time, end_time)).all()
+        print(start_time, end_time)
+        
+        return self.db.session.query(self.classes.attacker).filter(self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime.between(start_time, end_time)).all()
 
 
         #else:

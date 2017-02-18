@@ -2,6 +2,8 @@ import inspect
 import logging
 import os
 import json
+import datetime
+import collections
 
 from flask import Flask
 from flask_restful import Resource, Api, reqparse
@@ -79,6 +81,10 @@ class Core():
         self.update_database(start_time, end_time, alliance)
 
 
+        # Make the datetime.datetime for losses_utils.py 
+        start_time = datetime.datetime.strptime(start_time, '%Y%m%d%H%M')
+        end_time   = datetime.datetime.strptime(end_time,   '%Y%m%d%H%M')
+
         s = self.lu.query(alliance, start_time=start_time, end_time=end_time, type_='attacker')
 
         self.logger.info('QUERY LENGTH: %s' % (len(s)))
@@ -151,11 +157,12 @@ class Core():
 
                 print(c)
 
-                return_data.append(k)
+                #return_data.append(k)
                 
                 # jesus fuck
                 #print('SUCCESSFULL USAGE: (%s)' % (times_used), 'SHIPS: %s' % (' '.join('%s %sx ' % t for t in c)))
 
+                return_data.append({'%s' % (times_used):c})
 
                 #for item in filtered_dict[k]:
                 #    print('https://zkillboard.com/kill/%s' % (item))
