@@ -147,6 +147,7 @@ class Core():
         for k in sorted(filtered_dict, key=lambda k: len(filtered_dict[k]), reverse=True):
 
 
+            kb_links = []
             times_used = len(filtered_dict[k])
 
             if times_used >= min_fleet_limit:
@@ -155,19 +156,15 @@ class Core():
 
                 c = collections.Counter(eval(k)).most_common()
 
-                print(c)
-
-                #return_data.append(k)
-                
                 # jesus fuck
                 #print('SUCCESSFULL USAGE: (%s)' % (times_used), 'SHIPS: %s' % (' '.join('%s %sx ' % t for t in c)))
 
-                return_data.append({'%s' % (times_used):c})
+              
+                for item in filtered_dict[k]:
+                    kb_links.append('https://zkillboard.com/kill/%s' % item)
+                
 
-                #for item in filtered_dict[k]:
-                #    print('https://zkillboard.com/kill/%s' % (item))
-
-                #print('\n')
+                return_data.append({'%s' % (times_used):c,'kb_links':kb_links})
 
 
         return return_data
