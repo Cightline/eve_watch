@@ -18,33 +18,20 @@ import evelink
 
 
 class Update():
-    def __init__(self, config):
+    def __init__(self, config, logger, db):
         self.config   = config
         self.utils    = Utils(self.config)
         self.eve      = evelink.eve.EVE() 
-        self.db       = Connect(self.config['database']['data']) 
+        self.db       = db
         self.classes  = self.db.base.classes
         self.headers  = {'user-agent': 'kill-frame/0.0.1 maintainer: Sightline email: sightline.networks@gmail.com', 'Accept-Encoding': 'gzip'}
-
-
-
-    def create_databases(self):
-        from sql        import initialize_sql
-        from sql.pi     import Pi
-        from sql.losses import ItemsLost, Kills
-        from sql.alliances import Corporation, Alliance
-
-        initialize_sql(self.db.engine)
-
-    def check_database(self, create=False):
-        if not os.path.exists(self.config['database']['data'].split(':')[-1]):
-            self.create_database()
+        self.logger   = logger
 
 
 
     def update_losses(self, start_time, end_time, alliance_ids):
         '''Pull the kills from zKillboard and store them in the database'''
-        print('updating losses...')
+        self.logger.info('updating losses...')
 
         losses              = self.db
         items_lost          = {}
@@ -59,17 +46,15 @@ class Update():
         end_time   = datetime.datetime.strptime(end_time,   '%Y%m%d%H%M').strftime('%Y%m%d%H00')
         data = None
         
-        self.check_database(create=True)
+        self.logger.info('start date: %s' % (start_time))
 
-        print('Start date: %s' % (start_time))
-
-        
         for alliance_id in alliance_ids:
 
             page = 0
             
             
-            print('Working on: %s' % (alliance_id))
+            self.logger.debug('working on: %s' % (alliance_id))
+
             
             while True:
                 
@@ -79,11 +64,9 @@ class Update():
                                                                                                                          page), 
                                                                                                                          headers=self.headers)
            
-                print(data.url)
+                self.logger.debug(data.url)
                 j_data = json.loads(data.text)
 
-                print(len(j_data))
-            
 
                 for row in j_data:
                     
@@ -97,7 +80,6 @@ class Update():
                     query = losses.session.query(losses.base.classes.kills).filter_by(killID=kill_id).first()
 
                     if query:
-                        #print('killID already exists, skipping...')
                         continue
 
                     
@@ -133,7 +115,6 @@ class Update():
 
             
                     for line in row['attackers']:
-                        print(line)
                         attacker = losses.base.classes.attacker(weaponTypeID=line['weaponTypeID'],
                                                             allianceID=line['allianceID'],
                                                             corporationName=line['corporationName'],

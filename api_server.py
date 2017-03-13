@@ -46,8 +46,6 @@ class FleetComposition(Resource):
         #autolog(args)
     
         data = core.fleet_composition(start_time=start_time, end_time=end_time, alliance=[alliance])
-
-
          
 
         return data

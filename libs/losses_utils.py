@@ -8,26 +8,34 @@ class LossesUtils():
         self.classes = self.db.base.classes
         
 
-    def oldest_record(self, alliance_ids, start_date, kills='kills'):
+    # Include end time so we dont query the whole thing
+    def oldest_record(self, alliance_ids, start_time, end_time, type_='attacker'):
+
+        rd = self.db.session.query(self.classes.attacker).filter(self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime.between(start_time, end_time)).order_by(self.classes.attacker.killTime.asc()).first()
+
+        if not rd:
+            return None
+
+        return rd.killTime
         # Get the first killTime recorded
-        if kills == 'kills':
-            result = self.db.session.query(self.classes.attacker.killTime).filter(self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime >= start_date).order_by(self.classes.attacker.killTime.asc()).first() 
+        #if kills == 'kills':
+        #    result = self.db.session.query(self.classes.attacker.killTime).filter(self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime >= start_date).order_by(self.classes.attacker.killTime.asc()).first() 
 
-            if not result:
-                return None
+        #    if not result:
+        #        return None
 
-            else:
-                return result.killTime
+        #    else:
+        #        return result.killTime
 
 
         # been killed?
         #select * from kills where allianceID = 1006830534 order by killTime asc limit 1;
-        return self.db.session.query(self.classes.kills.killTime).filter(self.classes.kills.allianceID.in_(alliance_ids)).order_by(self.classes.kills.killTime.asc()).first().killTime 
+        #return self.db.session.query(self.classes.kills.killTime).filter(self.classes.kills.allianceID.in_(alliance_ids)).order_by(self.classes.kills.killTime.asc()).first().killTime 
 
 
     # Returns total ships 
     def query_total(self, alliance_ids, start_date, characterID=None, kills='used'):
-        print('FUCK')
+        #print('FUCK')
         #if kills == 'used' and characterID:
         #    return self.db.session.query(self.classes.attacker.shipTypeID, func.count(self.classes.attacker.shipTypeID)).group_by(self.classes.attacker.shipTypeID).filter(
         #            self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime >= start_date).filter_by(characterID=characterID).all()
@@ -49,12 +57,6 @@ class LossesUtils():
 
 
     def query(self, alliance_ids, start_time, end_time, characterID=None, shipTypeID=None, type_='attacker'):
-        print('FUCKER')
-
-        print(start_time, end_time)
-        
         return self.db.session.query(self.classes.attacker).filter(self.classes.attacker.allianceID.in_(alliance_ids)).filter(self.classes.attacker.killTime.between(start_time, end_time)).all()
 
 
-        #else:
-        #    return self.db.session.query(self.classes.kills).filter(self.classes.kills.allianceID.in_(alliance_ids)).filter(self.classes.kills.killTime >= start_time).all()

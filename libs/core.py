@@ -4,6 +4,7 @@ import os
 import json
 import datetime
 import collections
+import ast
 
 from flask import Flask
 from flask_restful import Resource, Api, reqparse
@@ -26,10 +27,6 @@ class Core():
     def __init__(self):
         self.load_config()
 
-        self.lu            = LossesUtils(self.config)
-        self.u             = Utils(self.config)
-        self.db            = Connect(self.config['database']['data'])
-        self.update        = Update(self.config)
 
         # NOT SURE HOW TO HAVE JUST ONE LOGGER, SO I'M IMPORTING IT AGAIN AND SETTING IT UP.. AGAIN
         f_handler = logging.FileHandler(self.get_config()['log_path'])
@@ -38,6 +35,14 @@ class Core():
         self.logger = colorlog.getLogger()
         self.logger.handlers = [f_handler]
         self.logger.setLevel(logging.DEBUG)
+
+
+        # Check the database before initilizaing the rest of the libraries
+        # losses_utils will try to connect to the library, causing it to create an empty file.
+        self.db            = Connect(self.config['database']['data'])
+        self.update        = Update(self.config, self.logger, self.db)
+        self.lu            = LossesUtils(self.config)
+        self.u             = Utils(self.config)
 
 
     def load_config(self):
@@ -57,17 +62,18 @@ class Core():
 
         self.config = config
 
+        
+
     def get_config(self):
         return self.config
-
-
 
 
     def update_database(self, start_time, end_time, alliance):
         self.logger.info('updating database')
         self.update.update_losses(start_time, end_time, alliance)
 
-
+    
+    
     
     def fleet_composition(self, alliance, start_time, end_time, min_fleet_limit=1):
         kill_dict   = {}
@@ -78,16 +84,19 @@ class Core():
         ordered_and_filtered_dict = {}
         return_data = []
 
-        self.update_database(start_time, end_time, alliance)
 
+        s_start_time = datetime.datetime.strptime(start_time, '%Y%m%d%H%M').strftime('%Y%m%d%H00')
+        s_end_time   = datetime.datetime.strptime(end_time,   '%Y%m%d%H%M').strftime('%Y%m%d%H00')
 
         # Make the datetime.datetime for losses_utils.py 
-        start_time = datetime.datetime.strptime(start_time, '%Y%m%d%H%M')
-        end_time   = datetime.datetime.strptime(end_time,   '%Y%m%d%H%M')
+        d_start_time = datetime.datetime.strptime(s_start_time, '%Y%m%d%H%M')
+        d_end_time   = datetime.datetime.strptime(s_end_time,   '%Y%m%d%H%M')
 
-        s = self.lu.query(alliance, start_time=start_time, end_time=end_time, type_='attacker')
+        
+        
+        self.update_database(s_start_time, s_end_time, alliance)
 
-        self.logger.info('QUERY LENGTH: %s' % (len(s)))
+        s = self.lu.query(alliance, start_time=d_start_time, end_time=d_end_time, type_='attacker')
 
         # Attackers
         for kill in s:
@@ -153,18 +162,16 @@ class Core():
             if times_used >= min_fleet_limit:
                 # FIX EVAL
 
-
-                c = collections.Counter(eval(k)).most_common()
+                #['Ashimmu', 'Ashimmu', 'Devoter', 'Ishtar', 'Legion', 'Prophecy', 'Prophecy', 'Sacrilege', 'Stratios', 'Stratios']
+                 
+                c = collections.Counter(ast.literal_eval(k)).most_common()
 
                 # jesus fuck
                 #print('SUCCESSFULL USAGE: (%s)' % (times_used), 'SHIPS: %s' % (' '.join('%s %sx ' % t for t in c)))
 
               
-                for item in filtered_dict[k]:
-                    kb_links.append('https://zkillboard.com/kill/%s' % item)
-                
 
-                return_data.append({'%s' % (times_used):c,'kb_links':kb_links})
+                return_data.append({'%s' % (times_used):c,'kb_links':filtered_dict[k]})
 
 
         return return_data
