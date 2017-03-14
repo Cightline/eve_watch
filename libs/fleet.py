@@ -10,10 +10,12 @@ class fleet_composition():
         self.update = utils.update_utils
         self.utils  = utils
    
+   
     def update_database(self, start_time, end_time, alliance):
         self.logger.info('updating database')
         self.update.update_losses(start_time, end_time, alliance)
-    
+   
+
     def get(self, alliance, start_time, end_time, min_fleet_limit=1):
         kill_dict   = {}
         fleet_dict  = {}
