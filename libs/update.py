@@ -10,7 +10,6 @@ from sqlalchemy import *
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import IntegrityError
 
-from libs.utils     import Utils
 from sql.db_connect import Connect
 
 import evelink
@@ -20,7 +19,6 @@ import evelink
 class Update():
     def __init__(self, config, logger, db):
         self.config   = config
-        self.utils    = Utils(self.config)
         self.eve      = evelink.eve.EVE() 
         self.db       = db
         self.classes  = self.db.base.classes

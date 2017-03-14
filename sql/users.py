@@ -14,29 +14,13 @@ class Users(Base):
     password   = Column(String(255))
     api_code   = Column(String(255))
     api_key_id = Column(String(255))
-    active     = Column(Boolean)
-    activation_code      = Column(String(255))
-    recovery_code        = Column(String(255))
-    activation_timestamp = Column(DateTime)
-    recovery_timestamp   = Column(DateTime)
 
     characters = relationship('Character', backref='user', lazy='dynamic')
 
-    def is_active(self):
-        # Change this
-        return True
+    #def get_id(self):
+    #    return self.email
 
-    def is_authenticated(self):
-        # and this
-        return True
-    
-    def is_anonymous(self):
-        return False
-
-    def get_id(self):
-        return self.email
-
-    def __unicode__(self):
-        return self.email
+    #def __unicode__(self):
+    #    return self.email
 
 
